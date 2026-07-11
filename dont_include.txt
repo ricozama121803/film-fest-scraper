@@ -1,0 +1,60 @@
+# One festival name or website domain per line.
+# Lines starting with # and blank lines are ignored.
+# Examples:
+# some-unwanted-festival.com
+# Some Festival Name I Don't Want
+World Music & Independent Film Festival
+Wine, Women & Film Festival
+WILLIAMSBURG INTERNATIONAL FILM & MUSIC COMPETITION
+VASTLAB Experimental
+Ural Shorts
+UNIVERSAL KIDS FILM FESTIVAL
+Tarzana Comic Con / Film Fest
+TIAF - Tbilisi International Animation Festival
+THE GALACTIC IMAGINARIUM FILM FESTIVAL
+Student Los Angeles Film Awards
+Sound and Music Film Festival Makedonska 21
+Saugatuck Film Fest
+Sasqwatch International Film Festival
+Queens World Film Festival
+One Earth Young Filmmakers Contest
+Oldenburg International Film Festival
+Ohio Valley Festival For Filmmakers of Color
+Oak Park Film Festival
+OUT OF THE CAN INTERNATIONAL FILM FESTIVAL
+Nightpiece Film Festival
+New Jersey Horror Con and Film Festival
+New Age Cinemas & Scripts
+NADYM INTERNATIONAL FILM FESTIVAL
+Murmat Short Film Festival
+Mosaic International South Asian Film Festival
+Montreal Requiem Fear Fest
+Mindfield Film Festival
+MakeDox
+Lisboa Indie Film Festival
+Jersey Surf Film Festival
+Italian Comedy Festival
+International Thai Film Festival
+International Festival of Animation Films «Animaevka»
+International Documentary Historical Film Festival
+International Companion Animal Film Festival
+Indo Global International Film Festival
+Gulf Coast Film & Video Festival
+FRIGHTFEST
+Elevate SoCal Film Festival
+Dreamer's Short Film Festival
+Deep Focus Film Festival
+Comedy Europe Film Festival
+Ciudad del Este Independent Film Festival
+Cinematic Panic
+Chennai National Short Film Festival
+Carpathian Mountain International Film Festival
+Caribbean International Film Fest
+Big Eddy Film Festival
+B & B International Film Festival
+Aryan International Children's Film Festival of Jaipur
+Arpa International Film Festival
+American Jewish Film Festival
+16 International Film Festivals - in Jaipur India by JIFF
+Autumn in Voronet International Film Festival
+

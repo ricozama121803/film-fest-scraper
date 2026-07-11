@@ -1,0 +1,17 @@
+crawl:
+  max_new_festivals: 75
+  max_depth: 2
+  max_internal_pages_per_site: 2
+  max_existing_to_refresh: 20
+  request_delay_seconds: 1.0
+  request_timeout_seconds: 8
+  max_retries: 1
+
+paths:
+  csv_path: data/festivals.csv
+  exclude_file: dont_include.txt
+  log_path: logs/crawl.log
+
+fetcher:
+  user_agent: "FilmFestScraperBot/0.1 (contact: ricozama121803@gmail.com)"
+  playwright_headless: true

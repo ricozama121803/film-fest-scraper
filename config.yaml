@@ -6,6 +6,8 @@ crawl:
   request_delay_seconds: 1.0
   request_timeout_seconds: 8
   max_retries: 1
+  filmfreeway_max_pages: 5
+  country_filter: null
 
 paths:
   csv_path: data/festivals.csv

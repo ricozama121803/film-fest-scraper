@@ -18,6 +18,8 @@ class CrawlConfig:
     request_delay_seconds: float = 1.5
     request_timeout_seconds: int = 15
     max_retries: int = 2
+    filmfreeway_max_pages: int = 5
+    country_filter: list[str] | None = None
 
     csv_path: str = "data/festivals.csv"
     exclude_file: str = "dont_include.txt"
@@ -42,6 +44,8 @@ _YAML_KEY_MAP = {
         "request_delay_seconds",
         "request_timeout_seconds",
         "max_retries",
+        "filmfreeway_max_pages",
+        "country_filter",
     ],
     "paths": {
         "csv_path": "csv_path",

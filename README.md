@@ -11,7 +11,9 @@ Each run:
 1. **Discovers candidates** from a set of pluggable sources
    (`filmfest_scraper/sources/`):
    - `wikipedia_list` — Wikipedia's list of film festivals
-   - `filmfreeway_browse` — FilmFreeway's festival browse pages
+   - `filmfreeway_browse` — FilmFreeway's festival browse pages, walked
+     across multiple pages (`--max-pages`) since smaller/regional festivals
+     mostly show up past page 1
    - `regional_directory` — a regional festival directory
 2. **Dedupes cheaply** — drops any candidate that already matches an existing
    row (by normalized name/domain) or a candidate already seen this run,
@@ -56,6 +58,8 @@ Common flags (all optional — defaults come from `config.yaml`):
 | `--max-depth N` | Max crawl depth |
 | `--max-existing-refresh N` | Max existing rows to refresh this run |
 | `--refresh-existing` | Force re-check **all** existing rows, ignoring the cap |
+| `--max-pages N` | Max FilmFreeway browse pages to walk (default 5, ~60 festivals/page) |
+| `--country USA` | Comma-separated list of countries to keep newly discovered festivals from (e.g. `USA` or `USA,Canada`); unset = no filtering. Best-effort: a candidate is only dropped if its country was confidently detected as something *other* than the filter — festivals with an undetected location are kept rather than dropped |
 | `--sources a,b,c` | Only run these sources (default: all) |
 | `--config path.yaml` | Use a different config file |
 | `--csv-path path.csv` | Override the CSV output path |
@@ -74,6 +78,9 @@ python crawl.py
 
 # Re-check every existing festival's site for updated info
 python crawl.py --refresh-existing
+
+# Dig deeper into FilmFreeway for smaller US festivals
+python crawl.py --sources filmfreeway_browse --max-pages 20 --country USA
 ```
 
 ## Files

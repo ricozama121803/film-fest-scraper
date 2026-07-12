@@ -32,6 +32,30 @@ logger = logging.getLogger(__name__)
 
 CONTACT_PAGE_KEYWORDS = ("about", "contact", "deadline")
 
+# Aliases the extracted country field may take for a given filter value --
+# extractor.extract_dates_and_location() sometimes yields "USA" (via its
+# state-abbreviation heuristic) and sometimes "United States" (via the
+# generic city-country pattern) for the same country.
+COUNTRY_ALIASES = {
+    "usa": {"usa", "united states", "united states of america", "us"},
+}
+
+
+def country_allowed(country: str, filters: list[str] | None) -> bool:
+    """Country filtering is best-effort: extraction of a festival's country
+    from free-form page text often comes back blank, so an unset/blank
+    country is treated as "unknown, don't drop it" rather than excluded."""
+    if not filters:
+        return True
+    if not country:
+        return True
+    normalized = country.strip().lower()
+    for f in filters:
+        f_norm = f.strip().lower()
+        if normalized == f_norm or normalized in COUNTRY_ALIASES.get(f_norm, set()):
+            return True
+    return False
+
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -40,6 +64,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--exclude-file", dest="exclude_file", help="Override dont_include.txt path")
     parser.add_argument("--max-new", dest="max_new_festivals", type=int, help="Max newly discovered festivals this run")
     parser.add_argument("--max-depth", dest="max_depth", type=int, help="Max crawl depth")
+    parser.add_argument("--max-pages", dest="filmfreeway_max_pages", type=int, help="Max FilmFreeway browse pages to walk")
+    parser.add_argument("--country", dest="country_filter", help="Comma-separated list of countries to keep newly discovered festivals from (e.g. USA); unset = no filtering")
     parser.add_argument("--max-existing-refresh", dest="max_existing_to_refresh", type=int, help="Max existing rows to refresh this run")
     parser.add_argument("--refresh-existing", dest="refresh_existing", action="store_true", help="Force re-check ALL existing rows, ignoring the cap")
     parser.add_argument("--sources", dest="sources", help="Comma-separated list of source names to run (default: all)")
@@ -108,6 +134,15 @@ def merge_partial_into(target: Festival, source: Festival) -> None:
                 setattr(target, field_name, source_value)
 
 
+# Directory domains that a source may fall back to using as a candidate's
+# "homepage_url" when it couldn't find the festival's own external site
+# (e.g. filmfreeway_browse falling back to the FilmFreeway profile page
+# itself). Many unrelated candidates can legitimately share one of these as
+# their homepage, so domain-based dedup must not treat them as duplicates of
+# each other -- fall back to name-based dedup for these instead.
+NON_DEDUPE_DOMAINS = {"filmfreeway.com"}
+
+
 def cheap_dedupe_candidates(
     candidates: list[DiscoveredFestival], existing: list[Festival]
 ) -> list[DiscoveredFestival]:
@@ -122,6 +157,8 @@ def cheap_dedupe_candidates(
     result = []
     for c in candidates:
         domain = normalize_domain(c.homepage_url)
+        if domain in NON_DEDUPE_DOMAINS:
+            domain = ""
         name = normalize_name(c.name_hint)
 
         if domain and domain in existing_domains:
@@ -148,6 +185,8 @@ def main(argv: list[str] | None = None) -> int:
         "exclude_file": args.exclude_file,
         "max_new_festivals": args.max_new_festivals,
         "max_depth": args.max_depth,
+        "filmfreeway_max_pages": args.filmfreeway_max_pages,
+        "country_filter": [c.strip() for c in args.country_filter.split(",")] if args.country_filter else None,
         "max_existing_to_refresh": args.max_existing_to_refresh,
         "refresh_existing": args.refresh_existing or None,
         "sources": args.sources.split(",") if args.sources else None,
@@ -208,6 +247,9 @@ def main(argv: list[str] | None = None) -> int:
                 continue
 
             if festival is not None:
+                if not country_allowed(festival.country, config.country_filter):
+                    logger.debug("Skipping %s: country %r not in filter", festival.website, festival.country)
+                    continue
                 new_festivals.append(festival)
 
         merged, stats = run_merge_pipeline(existing, new_festivals, exclusions, config.max_new_festivals)

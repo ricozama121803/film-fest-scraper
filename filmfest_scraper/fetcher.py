@@ -56,6 +56,15 @@ class FetchResult:
 _playwright_ctx = None
 _browser = None
 
+# Run-lifetime cache of fetch results by normalized URL. A source may yield
+# a candidate homepage_url that it already fetched itself (e.g. falling back
+# to a directory profile page as the "homepage" when no external site was
+# found) -- without this, the second fetch_url() call for that same URL
+# would be silently dropped by PolitenessManager's duplicate-URL guard,
+# which exists to prevent redundant network fetches, not to fail callers
+# needing the same result twice.
+_fetch_cache: dict[str, FetchResult] = {}
+
 
 def _get_browser(config: CrawlConfig):
     global _playwright_ctx, _browser
@@ -83,6 +92,7 @@ def close_browser() -> None:
         except Exception:
             logger.debug("Error stopping Playwright context", exc_info=True)
         _playwright_ctx = None
+    _fetch_cache.clear()
 
 
 def needs_js_rendering(html: str, url: str) -> bool:
@@ -186,6 +196,11 @@ def _fetch_with_playwright(url: str, config: CrawlConfig) -> FetchResult:
 
 
 def fetch_url(url: str, politeness: PolitenessManager, config: CrawlConfig) -> FetchResult:
+    norm_url = url.split("#", 1)[0].strip()
+    cached = _fetch_cache.get(norm_url)
+    if cached is not None:
+        return cached
+
     if not politeness.wait_and_mark(url):
         return FetchResult(
             url=url, final_url=url, status_code=None, html="", fetch_method="failed",
@@ -203,4 +218,5 @@ def fetch_url(url: str, politeness: PolitenessManager, config: CrawlConfig) -> F
 
     if not result.ok:
         logger.warning("SKIP %s reason=%s", url, result.error)
+    _fetch_cache[norm_url] = result
     return result

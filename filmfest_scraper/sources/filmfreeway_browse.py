@@ -39,25 +39,34 @@ RESERVED_SLUGS = {
 WEBSITE_LINK_TEXT = ("official website", "visit website", "website")
 
 
+BASE_URL = "https://filmfreeway.com/festivals"
+
+
 @register_source
 class FilmFreewayBrowseSource(DirectorySource):
     name = "filmfreeway_browse"
-    seed_urls = [
-        "https://filmfreeway.com/festivals",
-    ]
+    seed_urls = [BASE_URL]
 
     def discover(
         self, fetch_url_fn: FetchFn, politeness: PolitenessManager, config: CrawlConfig
     ) -> Iterator[DiscoveredFestival]:
-        for seed_url in self.seed_urls:
+        # FilmFreeway's browse listing has ~200 pages (~12k festivals) --
+        # walking pages beyond page 1 is what surfaces the smaller/regional
+        # festivals that don't make it onto the front page.
+        max_pages = max(1, config.filmfreeway_max_pages)
+        seen_profiles: set[str] = set()
+
+        for page_num in range(1, max_pages + 1):
+            seed_url = BASE_URL if page_num == 1 else f"{BASE_URL}?page={page_num}"
             result = fetch_url_fn(seed_url, politeness, config)
             if not result.ok:
                 logger.warning("Could not fetch FilmFreeway seed %s: %s", seed_url, result.error)
                 continue
 
             soup = BeautifulSoup(result.html, "lxml")
-            profile_urls = self._extract_profile_urls(soup)
-            logger.info("FilmFreeway browse found %d candidate profile links on %s", len(profile_urls), seed_url)
+            profile_urls = [u for u in self._extract_profile_urls(soup) if u not in seen_profiles]
+            seen_profiles.update(profile_urls)
+            logger.info("FilmFreeway browse found %d new candidate profile links on %s", len(profile_urls), seed_url)
 
             for profile_url in profile_urls:
                 profile_result = fetch_url_fn(profile_url, politeness, config)

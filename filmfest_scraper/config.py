@@ -20,6 +20,7 @@ class CrawlConfig:
     max_retries: int = 2
     filmfreeway_max_pages: int = 5
     country_filter: list[str] | None = None
+    strict_country: bool = False
 
     csv_path: str = "data/festivals.csv"
     exclude_file: str = "dont_include.txt"
@@ -46,6 +47,7 @@ _YAML_KEY_MAP = {
         "max_retries",
         "filmfreeway_max_pages",
         "country_filter",
+        "strict_country",
     ],
     "paths": {
         "csv_path": "csv_path",

@@ -10,6 +10,18 @@ STOPWORDS = {"festival", "film", "films", "international", "the", "fest"}
 
 FUZZY_RATIO_THRESHOLD = 0.9
 
+# Directory domains that many unrelated festivals can legitimately share as
+# their "website" when a candidate's own external site couldn't be found
+# (e.g. a FilmFreeway profile page used as a fallback homepage). Domain
+# equality alone must not be treated as a duplicate match for these --
+# mirrors the same guard crawl.py applies during pre-fetch cheap dedupe.
+NON_DEDUPE_DOMAINS = {"filmfreeway.com"}
+
+
+def _effective_domain(url: str) -> str:
+    domain = normalize_domain(url)
+    return "" if domain in NON_DEDUPE_DOMAINS else domain
+
 
 def loose_name_key(name: str) -> str:
     """Fuzzy secondary signal only -- strips common festival-naming stopwords
@@ -22,7 +34,7 @@ def loose_name_key(name: str) -> str:
 
 
 def dedupe_key(festival: Festival) -> tuple[str, str]:
-    return normalize_name(festival.name), normalize_domain(festival.website)
+    return normalize_name(festival.name), _effective_domain(festival.website)
 
 
 def _fuzzy_name_match(a: Festival, b: Festival) -> bool:
@@ -35,8 +47,8 @@ def _fuzzy_name_match(a: Festival, b: Festival) -> bool:
 
 
 def is_duplicate(existing: Festival, candidate: Festival) -> bool:
-    domain_a = normalize_domain(existing.website)
-    domain_b = normalize_domain(candidate.website)
+    domain_a = _effective_domain(existing.website)
+    domain_b = _effective_domain(candidate.website)
 
     if domain_a and domain_b:
         if domain_a == domain_b:

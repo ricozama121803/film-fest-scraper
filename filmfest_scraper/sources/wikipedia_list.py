@@ -46,6 +46,22 @@ NON_FESTIVAL_DOMAINS = {
 CANDIDATE_MULTIPLIER = 2
 MIN_CANDIDATE_CAP = 20
 
+# The worldwide list page alone has far more festival-article links than any
+# reasonable candidate_cap, so discover() always exhausts its cap there and
+# never reaches the region-specific list pages below. When the run's country
+# filter is scoped to North America, check the matching region-specific list
+# first so its candidates actually get a chance to be yielded.
+NORTH_AMERICA_COUNTRY_FILTER_HINTS = {"usa", "united states", "united states of america", "us", "canada", "mexico"}
+
+# When the filter is USA specifically, an even more direct source exists:
+# List_of_film_festivals_in_the_United_States is organized state-by-state
+# with festival articles clustered densely, unlike the North America list
+# (organized country-by-country, where "United States" is the last section
+# after Canada/Caribbean/Central America/Mexico -- a candidate_cap sized for
+# a short run never reaches it). Prefer this page first for a USA filter.
+USA_COUNTRY_FILTER_HINTS = {"usa", "united states", "united states of america", "us"}
+US_SPECIFIC_SEED_URL = "https://en.wikipedia.org/wiki/List_of_film_festivals_in_the_United_States"
+
 
 def _is_article_link(absolute_url: str) -> bool:
     """absolute_url must already be resolved (Wikipedia serves protocol-
@@ -132,7 +148,15 @@ class WikipediaListSource(DirectorySource):
         candidate_cap = max(MIN_CANDIDATE_CAP, config.max_new_festivals * CANDIDATE_MULTIPLIER)
         yielded = 0
 
-        for seed_url in self.seed_urls:
+        seed_urls = self.seed_urls
+        filters_lower = {f.strip().lower() for f in config.country_filter} if config.country_filter else set()
+        if filters_lower & USA_COUNTRY_FILTER_HINTS:
+            seed_urls = [US_SPECIFIC_SEED_URL] + [u for u in self.seed_urls if u != US_SPECIFIC_SEED_URL]
+        elif filters_lower & NORTH_AMERICA_COUNTRY_FILTER_HINTS:
+            na_url = "https://en.wikipedia.org/wiki/List_of_film_festivals_in_North_America"
+            seed_urls = [na_url] + [u for u in self.seed_urls if u != na_url]
+
+        for seed_url in seed_urls:
             if yielded >= candidate_cap:
                 break
 

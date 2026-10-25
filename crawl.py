@@ -14,6 +14,7 @@ import sys
 
 from filmfest_scraper import extractor
 from filmfest_scraper.config import CrawlConfig, load_config
+from filmfest_scraper.dedupe import NON_DEDUPE_DOMAINS
 from filmfest_scraper.fetcher import close_browser, fetch_url
 from filmfest_scraper.logging_config import setup_logging
 from filmfest_scraper.models import Festival, normalize_domain, normalize_name
@@ -41,14 +42,18 @@ COUNTRY_ALIASES = {
 }
 
 
-def country_allowed(country: str, filters: list[str] | None) -> bool:
-    """Country filtering is best-effort: extraction of a festival's country
-    from free-form page text often comes back blank, so an unset/blank
-    country is treated as "unknown, don't drop it" rather than excluded."""
+def country_allowed(country: str, filters: list[str] | None, strict: bool = False) -> bool:
+    """Country filtering is best-effort by default: extraction of a
+    festival's country from free-form page text often comes back blank, so
+    an unset/blank country is treated as "unknown, don't drop it" rather
+    than excluded. Pass strict=True (--strict-country) to instead require a
+    confidently-detected match, dropping undetected-country candidates too
+    -- trades recall for precision when false positives matter more than
+    missed festivals."""
     if not filters:
         return True
     if not country:
-        return True
+        return not strict
     normalized = country.strip().lower()
     for f in filters:
         f_norm = f.strip().lower()
@@ -66,6 +71,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-depth", dest="max_depth", type=int, help="Max crawl depth")
     parser.add_argument("--max-pages", dest="filmfreeway_max_pages", type=int, help="Max FilmFreeway browse pages to walk")
     parser.add_argument("--country", dest="country_filter", help="Comma-separated list of countries to keep newly discovered festivals from (e.g. USA); unset = no filtering")
+    parser.add_argument("--strict-country", dest="strict_country", action="store_true", help="With --country, also drop candidates whose country couldn't be confidently detected (default: keep them)")
     parser.add_argument("--max-existing-refresh", dest="max_existing_to_refresh", type=int, help="Max existing rows to refresh this run")
     parser.add_argument("--refresh-existing", dest="refresh_existing", action="store_true", help="Force re-check ALL existing rows, ignoring the cap")
     parser.add_argument("--sources", dest="sources", help="Comma-separated list of source names to run (default: all)")
@@ -134,15 +140,6 @@ def merge_partial_into(target: Festival, source: Festival) -> None:
                 setattr(target, field_name, source_value)
 
 
-# Directory domains that a source may fall back to using as a candidate's
-# "homepage_url" when it couldn't find the festival's own external site
-# (e.g. filmfreeway_browse falling back to the FilmFreeway profile page
-# itself). Many unrelated candidates can legitimately share one of these as
-# their homepage, so domain-based dedup must not treat them as duplicates of
-# each other -- fall back to name-based dedup for these instead.
-NON_DEDUPE_DOMAINS = {"filmfreeway.com"}
-
-
 def cheap_dedupe_candidates(
     candidates: list[DiscoveredFestival], existing: list[Festival]
 ) -> list[DiscoveredFestival]:
@@ -187,6 +184,7 @@ def main(argv: list[str] | None = None) -> int:
         "max_depth": args.max_depth,
         "filmfreeway_max_pages": args.filmfreeway_max_pages,
         "country_filter": [c.strip() for c in args.country_filter.split(",")] if args.country_filter else None,
+        "strict_country": args.strict_country or None,
         "max_existing_to_refresh": args.max_existing_to_refresh,
         "refresh_existing": args.refresh_existing or None,
         "sources": args.sources.split(",") if args.sources else None,
@@ -247,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
                 continue
 
             if festival is not None:
-                if not country_allowed(festival.country, config.country_filter):
+                if not country_allowed(festival.country, config.country_filter, config.strict_country):
                     logger.debug("Skipping %s: country %r not in filter", festival.website, festival.country)
                     continue
                 new_festivals.append(festival)
